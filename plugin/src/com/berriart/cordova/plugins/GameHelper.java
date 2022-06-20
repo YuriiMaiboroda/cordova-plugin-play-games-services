@@ -16,8 +16,6 @@
 
 package com.berriart.cordova.plugins;
 
-import java.util.ArrayList;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -31,7 +29,6 @@ import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.common.api.Api.ApiOptions.NoOptions;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.drive.Drive;
 import com.google.android.gms.games.Games;
@@ -44,6 +41,7 @@ import com.google.android.gms.plus.Plus;
 import com.google.android.gms.plus.Plus.PlusOptions;
 
 //import com.google.android.gms.games.request.GameRequest;
+
 public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
@@ -279,6 +277,7 @@ public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
 
         if (0 != (mRequestedClients & CLIENT_SNAPSHOT)) {
           builder.addScope(Drive.SCOPE_APPFOLDER);
+          builder.addScope(Games.SCOPE_GAMES_SNAPSHOTS);
           builder.addApi(Drive.API);
         }
 

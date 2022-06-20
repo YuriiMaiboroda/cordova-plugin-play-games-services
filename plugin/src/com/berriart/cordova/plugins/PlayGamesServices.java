@@ -39,10 +39,15 @@ import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Result;
 import com.google.android.gms.games.Games;
+import com.google.android.gms.games.GamesActivityResultCodes;
 import com.google.android.gms.games.GamesStatusCodes;
 import com.google.android.gms.games.Player;
 import com.google.android.gms.games.leaderboard.*;
 import com.google.android.gms.games.achievement.*;
+import com.google.android.gms.games.snapshot.Snapshot;
+import com.google.android.gms.games.snapshot.SnapshotContents;
+import com.google.android.gms.games.snapshot.SnapshotMetadataChange;
+import com.google.android.gms.games.snapshot.Snapshots;
 
 public class PlayGamesServices extends CordovaPlugin implements GameHelperListener {
 
@@ -65,6 +70,9 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
     private static final String ACTION_SHOW_ACHIEVEMENTS = "showAchievements";
     private static final String ACTION_SHOW_PLAYER = "showPlayer";
 
+    private static final String ACTION_SAVE_GAME = "saveGame";
+    private static final String ACTION_LOAD_GAME = "loadGame";
+
     private static final int ACTIVITY_CODE_SHOW_LEADERBOARD = 0;
     private static final int ACTIVITY_CODE_SHOW_ACHIEVEMENTS = 1;
 
@@ -81,7 +89,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         googlePlayServicesReturnCode = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(cordovaActivity);
 
         if (googlePlayServicesReturnCode == ConnectionResult.SUCCESS) {
-            gameHelper = new GameHelper(cordovaActivity, GameHelper.CLIENT_GAMES);
+            gameHelper = new GameHelper(cordovaActivity, GameHelper.CLIENT_GAMES | GameHelper.CLIENT_SNAPSHOT);
             gameHelper.setup(this);
         } else {
             Log.w(LOGTAG, String.format("GooglePlayServices not available. Error: '" +
@@ -144,6 +152,10 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
             executeIncrementAchievementNow(options, callbackContext);
         } else if (ACTION_SHOW_PLAYER.equals(action)) {
             executeShowPlayer(callbackContext);
+        } else if (ACTION_SAVE_GAME.equals(action)) {
+            executeSaveGame(options, callbackContext);
+        } else if (ACTION_LOAD_GAME.equals(action)) {
+            executeLoadGame(options, callbackContext);
         } else {
             return false; // Tried to execute an unknown method
         }
@@ -525,6 +537,116 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         });
     }
 
+    private void executeSaveGame(final JSONObject options, final CallbackContext callbackContext) {
+        Log.d(LOGTAG, "executeSaveGame");
+
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (gameHelper.isSignedIn()) {
+                        String saveName = options.getString("saveName");
+                        String saveData = options.getString("saveData");
+                        PendingResult<Snapshots.OpenSnapshotResult> result = Games.Snapshots.open(gameHelper.getApiClient(), saveName, true, Snapshots.RESOLUTION_POLICY_MOST_RECENTLY_MODIFIED);
+                        result.setResultCallback(new ResultCallback<Snapshots.OpenSnapshotResult>() {
+                            @Override
+                            public void onResult(Snapshots.OpenSnapshotResult snapshotResult) {
+                                try {
+                                    if (snapshotResult.getStatus().isSuccess()) {
+                                        Snapshot snapshot = snapshotResult.getSnapshot();
+                                        if (snapshot != null && snapshot.getSnapshotContents() != null) {
+                                            SnapshotContents snapshotContents = snapshot.getSnapshotContents();
+                                            snapshotContents.writeBytes(saveData.getBytes());
+
+                                            PendingResult<Snapshots.CommitSnapshotResult> result = Games.Snapshots.commitAndClose(gameHelper.getApiClient(), snapshot, SnapshotMetadataChange.EMPTY_CHANGE);
+                                            result.setResultCallback(new ResultCallback<Snapshots.CommitSnapshotResult>() {
+                                                @Override
+                                                public void onResult(Snapshots.CommitSnapshotResult commitSnapshotResult) {
+                                                    try {
+                                                        if (commitSnapshotResult.getStatus().isSuccess()) {
+                                                            callbackContext.success();
+                                                        } else {
+                                                            callbackContext.error("executeSaveGame: save not sent");
+                                                        }
+                                                    } catch (Exception e) {
+                                                        Log.w(LOGTAG, "executeSaveGame: unexpected error", e);
+                                                        callbackContext.error("executeSaveGame: error while send result");
+                                                    }
+                                                }
+                                            });
+                                        } else {
+                                            callbackContext.error("executeSaveGame: snapshotResult or SnapshotContents is null");
+                                        }
+                                    } else {
+                                        callbackContext.error("executeSaveGame error: " + snapshotResult.getStatus().getStatusMessage());
+                                    }
+                                } catch (Exception e) {
+                                    Log.w(LOGTAG, "executeSaveGame: unexpected error", e);
+                                    callbackContext.error("executeSaveGame: error while send save");
+                                }
+                            }
+                        });
+                    } else {
+                        Log.w(LOGTAG, "executeSaveGame: not yet signed in");
+                        callbackContext.error("executeSaveGame: not yet signed in");
+                    }
+                } catch (Exception e) {
+                    Log.w(LOGTAG, "executeSaveGame: unexpected error", e);
+                    callbackContext.error("executeSaveGame: error while open snapshot");
+                }
+            }
+        });
+    }
+
+
+    private void executeLoadGame(final JSONObject options, final CallbackContext callbackContext) {
+        Log.d(LOGTAG, "executeLoadGame");
+
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (gameHelper.isSignedIn()) {
+                        String saveName = options.getString("saveName");
+                        PendingResult<Snapshots.OpenSnapshotResult> result = Games.Snapshots.open(gameHelper.getApiClient(), saveName, false, Snapshots.RESOLUTION_POLICY_MOST_RECENTLY_MODIFIED);
+                        result.setResultCallback(new ResultCallback<Snapshots.OpenSnapshotResult>() {
+                            @Override
+                            public void onResult(Snapshots.OpenSnapshotResult snapshotResult) {
+                                try {
+                                    if (snapshotResult.getStatus().isSuccess()) {
+                                        Snapshot snapshot = snapshotResult.getSnapshot();
+                                        if (snapshot != null && snapshot.getSnapshotContents() != null) {
+                                            SnapshotContents snapshotContents = snapshot.getSnapshotContents();
+                                            byte[] snapshotData = snapshotContents.readFully();
+                                            String saveData = new String(snapshotData);
+
+                                            JSONObject playerJson = new JSONObject();
+                                            playerJson.put("saveData", saveData);
+
+                                            callbackContext.success(playerJson);
+                                        } else {
+                                            callbackContext.error("executeLoadGame: snapshotResult or SnapshotContents is null");
+                                        }
+                                    } else {
+                                        callbackContext.error("executeLoadGame error: " + snapshotResult.getStatus().getStatusMessage());
+                                    }
+                                } catch (Exception e) {
+                                    Log.w(LOGTAG, "executeLoadGame: unexpected error", e);
+                                    callbackContext.error("executeLoadGame: error while read snapshot");
+                                }
+                            }
+                        });
+                    } else {
+                        Log.w(LOGTAG, "executeLoadGame: not yet signed in");
+                        callbackContext.error("executeLoadGame: not yet signed in");
+                    }
+                } catch (Exception e) {
+                    Log.w(LOGTAG, "executeLoadGame: unexpected error", e);
+                    callbackContext.error("executeLoadGame: error while opening snapshot");
+                }
+            }
+        });
+    }
 
     @Override
     public void onSignInFailed() {
