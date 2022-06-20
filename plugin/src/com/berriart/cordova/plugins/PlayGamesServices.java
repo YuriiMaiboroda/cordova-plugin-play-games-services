@@ -538,6 +538,12 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        gameHelper.onActivityResult(requestCode, resultCode, intent);
+        if (requestCode == ACTIVITY_CODE_SHOW_LEADERBOARD
+                && resultCode == GamesActivityResultCodes.RESULT_RECONNECT_REQUIRED) {
+            Log.d(LOGTAG, "Disconnection from Play Services called from activity with code: " + requestCode);
+            gameHelper.disconnect();
+        } else {
+            gameHelper.onActivityResult(requestCode, resultCode, intent);
+        }
     }
 }
