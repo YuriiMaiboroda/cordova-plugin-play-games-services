@@ -283,6 +283,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                                         try {
                                             JSONObject result = new JSONObject();
                                             result.put("playerScore", score.getRawScore());
+                                            result.put("playerRank", score.getRank());
                                             callbackContext.success(result);
                                         } catch (JSONException e) {
                                             Log.w(LOGTAG, "executeGetPlayerScore: unexpected error", e);
