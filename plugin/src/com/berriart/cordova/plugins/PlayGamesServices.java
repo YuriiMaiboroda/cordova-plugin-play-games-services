@@ -202,7 +202,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
             public void run() {
                 try {
                     if (gameHelper.isSignedIn()) {
-                        Games.Leaderboards.submitScore(gameHelper.getApiClient(), options.getString("leaderboardId"), options.getInt("score"));
+                        Games.Leaderboards.submitScore(gameHelper.getApiClient(), options.getString("leaderboardId"), options.getLong("score"));
                         callbackContext.success("executeSubmitScore: score submited successfully");
                     } else {
                         callbackContext.error("executeSubmitScore: not yet signed in");
@@ -223,7 +223,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
             public void run() {
                 try {
                     if (gameHelper.isSignedIn()) {
-                        PendingResult<Leaderboards.SubmitScoreResult> result = Games.Leaderboards.submitScoreImmediate(gameHelper.getApiClient(), options.getString("leaderboardId"), options.getInt("score"));
+                        PendingResult<Leaderboards.SubmitScoreResult> result = Games.Leaderboards.submitScoreImmediate(gameHelper.getApiClient(), options.getString("leaderboardId"), options.getLong("score"));
                         result.setResultCallback(new ResultCallback<Leaderboards.SubmitScoreResult>() {
                             @Override
                             public void onResult(Leaderboards.SubmitScoreResult submitScoreResult) {
