@@ -19,15 +19,6 @@
 
 package com.berriart.cordova.plugins;
 
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaInterface;
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CordovaWebView;
-import org.apache.cordova.PluginResult;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.app.Activity;
 import android.content.Intent;
 import android.util.Log;
@@ -37,21 +28,33 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Result;
 import com.google.android.gms.games.Games;
 import com.google.android.gms.games.GamesActivityResultCodes;
 import com.google.android.gms.games.GamesStatusCodes;
 import com.google.android.gms.games.Player;
-import com.google.android.gms.games.leaderboard.*;
-import com.google.android.gms.games.achievement.*;
+import com.google.android.gms.games.achievement.Achievements;
+import com.google.android.gms.games.leaderboard.LeaderboardScore;
+import com.google.android.gms.games.leaderboard.LeaderboardVariant;
+import com.google.android.gms.games.leaderboard.Leaderboards;
+import com.google.android.gms.games.leaderboard.ScoreSubmissionData;
 import com.google.android.gms.games.snapshot.Snapshot;
 import com.google.android.gms.games.snapshot.SnapshotContents;
 import com.google.android.gms.games.snapshot.SnapshotMetadataChange;
 import com.google.android.gms.games.snapshot.Snapshots;
 
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaInterface;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CordovaWebView;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
+
 public class PlayGamesServices extends CordovaPlugin implements GameHelperListener {
 
-    private static final String LOGTAG = "berriart-CordovaPlayGamesServices";
+    private static final String LOGTAG = "CordovaPlayGamesService";
 
     private static final String ACTION_AUTH = "auth";
     private static final String ACTION_SIGN_OUT = "signOut";
@@ -72,6 +75,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
 
     private static final String ACTION_SAVE_GAME = "saveGame";
     private static final String ACTION_LOAD_GAME = "loadGame";
+    private static final String ACTION_DELETE_SAVE_GAME = "deleteSaveGame";
 
     private static final int ACTIVITY_CODE_SHOW_LEADERBOARD = 0;
     private static final int ACTIVITY_CODE_SHOW_ACHIEVEMENTS = 1;
@@ -160,6 +164,8 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
             executeSaveGame(options, callbackContext);
         } else if (ACTION_LOAD_GAME.equals(action)) {
             executeLoadGame(options, callbackContext);
+        } else if (ACTION_DELETE_SAVE_GAME.equals(action)) {
+            executeDeleteSaveGame(options, callbackContext);
         } else {
             return false; // Tried to execute an unknown method
         }
@@ -681,6 +687,59 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                     } catch (Exception e2) {
                         callbackContext.error("executeLoadGame: error while opening snapshot");
                     }
+                }
+            }
+        });
+    }
+
+    private void executeDeleteSaveGame(final JSONObject options, final CallbackContext callbackContext) {
+        Log.d(LOGTAG, "executeDeleteSaveGame");
+
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (gameHelper.isSignedIn()) {
+                        String saveName = options.getString("saveName");
+                        PendingResult<Snapshots.OpenSnapshotResult> result = Games.Snapshots.open(gameHelper.getApiClient(), saveName, false, Snapshots.RESOLUTION_POLICY_MOST_RECENTLY_MODIFIED);
+                        result.setResultCallback(new ResultCallback<Snapshots.OpenSnapshotResult>() {
+                            @Override
+                            public void onResult(Snapshots.OpenSnapshotResult snapshotResult) {
+                                try {
+                                    if (snapshotResult.getStatus().isSuccess()) {
+                                        Snapshot snapshot = snapshotResult.getSnapshot();
+                                        if (snapshot != null) {
+                                            Games.Snapshots.discardAndClose(gameHelper.getApiClient(), snapshot);
+                                            PendingResult<Snapshots.DeleteSnapshotResult> result = Games.Snapshots.delete(gameHelper.getApiClient(), snapshot.getMetadata());
+                                            result.setResultCallback(new ResultCallback<Snapshots.DeleteSnapshotResult>() {
+                                                 @Override
+                                                 public void onResult(Snapshots.DeleteSnapshotResult snapshotResult) {
+                                                     if (snapshotResult.getStatus().isSuccess()) {
+                                                         callbackContext.success();
+                                                     } else {
+                                                         callbackContext.error("executeDeleteSaveGame error: " + snapshotResult.getStatus().getStatusMessage());
+                                                     }
+                                                 }
+                                             });
+                                        } else {
+                                            callbackContext.error("executeDeleteSaveGame: snapshot is null");
+                                        }
+                                    } else {
+                                        callbackContext.error("executeDeleteSaveGame error: " + snapshotResult.getStatus().getStatusMessage());
+                                    }
+                                } catch (Exception e) {
+                                    Log.w(LOGTAG, "executeDeleteSaveGame: unexpected error", e);
+                                    callbackContext.error("executeDeleteSaveGame: error while deleting snapshot");
+                                }
+                            }
+                        });
+                    } else {
+                        Log.w(LOGTAG, "executeDeleteSaveGame: not yet signed in");
+                        callbackContext.error("executeDeleteSaveGame: not yet signed in");
+                    }
+                } catch (Exception e) {
+                    Log.w(LOGTAG, "executeDeleteSaveGame: unexpected error", e);
+                    callbackContext.error("executeDeleteSaveGame: error while opening snapshot");
                 }
             }
         });
