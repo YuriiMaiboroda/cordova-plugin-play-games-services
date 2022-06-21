@@ -35,4 +35,8 @@ actions.forEach(function (action) {
     };
 });
 
+PlayGamesServices.prototype.LOAD_GAME_ERROR_FAILED = 0;
+PlayGamesServices.prototype.LOAD_GAME_ERROR_NOT_EXIST = 1;
+PlayGamesServices.prototype.LOAD_GAME_ERROR_NOT_SIGNED = 2;
+
 module.exports = new PlayGamesServices();

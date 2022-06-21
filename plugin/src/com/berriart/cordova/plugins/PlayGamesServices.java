@@ -76,6 +76,10 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
     private static final int ACTIVITY_CODE_SHOW_LEADERBOARD = 0;
     private static final int ACTIVITY_CODE_SHOW_ACHIEVEMENTS = 1;
 
+    private static final int LOAD_GAME_ERROR_FAILED = 0;
+    private static final int LOAD_GAME_ERROR_NOT_EXIST = 1;
+    private static final int LOAD_GAME_ERROR_NOT_SIGNED = 2;
+
     private GameHelper gameHelper;
 
     private CallbackContext authCallbackContext;
@@ -556,26 +560,21 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                                         Snapshot snapshot = snapshotResult.getSnapshot();
                                         if (snapshot != null && snapshot.getSnapshotContents() != null) {
                                             SnapshotContents snapshotContents = snapshot.getSnapshotContents();
-                                            snapshotContents.writeBytes(saveData.getBytes());
+                                            snapshotContents.writeBytes(saveData.getBytes(StandardCharsets.UTF_8));
 
                                             PendingResult<Snapshots.CommitSnapshotResult> result = Games.Snapshots.commitAndClose(gameHelper.getApiClient(), snapshot, SnapshotMetadataChange.EMPTY_CHANGE);
                                             result.setResultCallback(new ResultCallback<Snapshots.CommitSnapshotResult>() {
                                                 @Override
                                                 public void onResult(Snapshots.CommitSnapshotResult commitSnapshotResult) {
-                                                    try {
-                                                        if (commitSnapshotResult.getStatus().isSuccess()) {
-                                                            callbackContext.success();
-                                                        } else {
-                                                            callbackContext.error("executeSaveGame: save not sent");
-                                                        }
-                                                    } catch (Exception e) {
-                                                        Log.w(LOGTAG, "executeSaveGame: unexpected error", e);
-                                                        callbackContext.error("executeSaveGame: error while send result");
+                                                    if (commitSnapshotResult.getStatus().isSuccess()) {
+                                                        callbackContext.success();
+                                                    } else {
+                                                        callbackContext.error("executeSaveGame: save not sent: " + commitSnapshotResult.getStatus().getStatusMessage());
                                                     }
                                                 }
                                             });
                                         } else {
-                                            callbackContext.error("executeSaveGame: snapshotResult or SnapshotContents is null");
+                                            callbackContext.error("executeSaveGame: snapshot or snapshotContents is null");
                                         }
                                     } else {
                                         callbackContext.error("executeSaveGame error: " + snapshotResult.getStatus().getStatusMessage());
@@ -618,31 +617,70 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                                         if (snapshot != null && snapshot.getSnapshotContents() != null) {
                                             SnapshotContents snapshotContents = snapshot.getSnapshotContents();
                                             byte[] snapshotData = snapshotContents.readFully();
-                                            String saveData = new String(snapshotData);
+                                            String saveData = (snapshotData == null || snapshotData.length == 0) ? "" : new String(snapshotData, StandardCharsets.UTF_8);
 
                                             JSONObject playerJson = new JSONObject();
                                             playerJson.put("saveData", saveData);
 
                                             callbackContext.success(playerJson);
                                         } else {
-                                            callbackContext.error("executeLoadGame: snapshotResult or SnapshotContents is null");
+                                            try {
+                                                JSONObject errorJson = new JSONObject();
+                                                errorJson.put("status", LOAD_GAME_ERROR_NOT_EXIST);
+                                                errorJson.put("message", "executeLoadGame: snapshot or snapshotContents is null");
+                                                callbackContext.error(errorJson);
+                                            } catch (Exception e2) {
+                                                callbackContext.error("executeLoadGame: snapshot or snapshotContents is null");
+                                            }
                                         }
                                     } else {
-                                        callbackContext.error("executeLoadGame error: " + snapshotResult.getStatus().getStatusMessage());
+                                        try {
+                                            JSONObject errorJson = new JSONObject();
+                                            if (snapshotResult.getStatus().getStatusCode() == GamesStatusCodes.STATUS_SNAPSHOT_NOT_FOUND) {
+                                                errorJson.put("status", LOAD_GAME_ERROR_NOT_EXIST);
+                                            } else {
+                                                errorJson.put("status", LOAD_GAME_ERROR_FAILED);
+                                            }
+                                            errorJson.put("message", "executeLoadGame error: " + snapshotResult.getStatus().getStatusMessage());
+                                            callbackContext.error(errorJson);
+                                        } catch (Exception e2) {
+                                            callbackContext.error("executeLoadGame error: " + snapshotResult.getStatus().getStatusMessage());
+                                        }
                                     }
                                 } catch (Exception e) {
                                     Log.w(LOGTAG, "executeLoadGame: unexpected error", e);
-                                    callbackContext.error("executeLoadGame: error while read snapshot");
+                                    try {
+                                        JSONObject errorJson = new JSONObject();
+                                        errorJson.put("status", LOAD_GAME_ERROR_FAILED);
+                                        errorJson.put("message", "executeLoadGame: error while read snapshot");
+                                        callbackContext.error(errorJson);
+                                    } catch (Exception e2) {
+                                        callbackContext.error("executeLoadGame: error while read snapshot");
+                                    }
                                 }
                             }
                         });
                     } else {
                         Log.w(LOGTAG, "executeLoadGame: not yet signed in");
-                        callbackContext.error("executeLoadGame: not yet signed in");
+                        try {
+                            JSONObject errorJson = new JSONObject();
+                            errorJson.put("status", LOAD_GAME_ERROR_NOT_SIGNED);
+                            errorJson.put("message", "executeLoadGame: not yet signed in");
+                            callbackContext.error(errorJson);
+                        } catch (Exception e2) {
+                            callbackContext.error("executeLoadGame: not yet signed in");
+                        }
                     }
                 } catch (Exception e) {
                     Log.w(LOGTAG, "executeLoadGame: unexpected error", e);
-                    callbackContext.error("executeLoadGame: error while opening snapshot");
+                    try {
+                        JSONObject errorJson = new JSONObject();
+                        errorJson.put("status", LOAD_GAME_ERROR_FAILED);
+                        errorJson.put("message", "executeLoadGame: error while opening snapshot");
+                        callbackContext.error(errorJson);
+                    } catch (Exception e2) {
+                        callbackContext.error("executeLoadGame: error while opening snapshot");
+                    }
                 }
             }
         });
