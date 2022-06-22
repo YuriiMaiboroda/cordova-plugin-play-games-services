@@ -756,6 +756,11 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
     }
 
     @Override
+    public void setActivityResultCallback() {
+        cordova.setActivityResultCallback(this);
+    }
+
+    @Override
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
         if (requestCode == ACTIVITY_CODE_SHOW_LEADERBOARD
                 && resultCode == GamesActivityResultCodes.RESULT_RECONNECT_REQUIRED) {
@@ -763,6 +768,14 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
             gameHelper.disconnect();
         } else {
             gameHelper.onActivityResult(requestCode, resultCode, intent);
+        }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (gameHelper != null) {
+            gameHelper.onStop();
         }
     }
 }

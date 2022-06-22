@@ -73,6 +73,8 @@ public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
 
         /** Called when sign-in succeeds. */
         void onSignInSucceeded();
+
+        void setActivityResultCallback();
     }
 
     // configuration done?
@@ -538,6 +540,7 @@ public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
         debugLog("Disconnecting client.");
         mConnectOnStart = false;
         mConnecting = false;
+        mConnectionResult = null;
         mGoogleApiClient.disconnect();
     }
 
@@ -676,6 +679,7 @@ public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
         mConnecting = true;
         mInvitation = null;
         mTurnBasedMatch = null;
+        mListener.setActivityResultCallback();
         mGoogleApiClient.connect();
     }
 
@@ -689,6 +693,7 @@ public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
             connect();
         } else {
             debugLog("Reconnecting client.");
+            mListener.setActivityResultCallback();
             mGoogleApiClient.reconnect();
         }
     }
@@ -850,6 +855,7 @@ public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
                 // launch appropriate UI flow (which might, for example, be the
                 // sign-in flow)
                 mExpectingResolution = true;
+                mListener.setActivityResultCallback();
                 mConnectionResult.startResolutionForResult(mActivity,
                         RC_RESOLVE);
             } catch (SendIntentException e) {
