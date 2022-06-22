@@ -21,6 +21,7 @@ package com.berriart.cordova.plugins;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.util.Log;
 
 import com.berriart.cordova.plugins.GameHelper.GameHelperListener;
@@ -98,6 +99,9 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
 
         if (googlePlayServicesReturnCode == ConnectionResult.SUCCESS) {
             gameHelper = new GameHelper(cordovaActivity, GameHelper.CLIENT_GAMES | GameHelper.CLIENT_SNAPSHOT);
+            if ((cordova.getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                gameHelper.enableDebugLog(true);
+            }
             gameHelper.setup(this);
         } else {
             Log.w(LOGTAG, String.format("GooglePlayServices not available. Error: '" +
