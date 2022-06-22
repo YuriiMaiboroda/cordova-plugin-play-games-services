@@ -577,7 +577,14 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                                                 @Override
                                                 public void onResult(Snapshots.CommitSnapshotResult commitSnapshotResult) {
                                                     if (commitSnapshotResult.getStatus().isSuccess()) {
-                                                        callbackContext.success();
+                                                        try {
+                                                            Long saveTime = commitSnapshotResult.getSnapshotMetadata().getLastModifiedTimestamp();
+                                                            JSONObject playerJson = new JSONObject();
+                                                            playerJson.put("saveTime", saveTime);
+                                                            callbackContext.success(playerJson);
+                                                        } catch (Exception e) {
+                                                            callbackContext.success();
+                                                        }
                                                     } else {
                                                         callbackContext.error("executeSaveGame: save not sent: " + commitSnapshotResult.getStatus().getStatusMessage());
                                                     }
@@ -628,9 +635,11 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                                             SnapshotContents snapshotContents = snapshot.getSnapshotContents();
                                             byte[] snapshotData = snapshotContents.readFully();
                                             String saveData = (snapshotData == null || snapshotData.length == 0) ? "" : new String(snapshotData, StandardCharsets.UTF_8);
+                                            Long saveTime = snapshot.getMetadata().getLastModifiedTimestamp();
 
                                             JSONObject playerJson = new JSONObject();
                                             playerJson.put("saveData", saveData);
+                                            playerJson.put("saveTime", saveTime);
 
                                             callbackContext.success(playerJson);
                                         } else {
