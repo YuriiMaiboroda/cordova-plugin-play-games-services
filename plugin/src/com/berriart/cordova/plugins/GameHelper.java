@@ -26,6 +26,9 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.View;
+
+import androidx.annotation.Nullable;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -282,6 +285,8 @@ public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
           builder.addScope(Games.SCOPE_GAMES_SNAPSHOTS);
           builder.addApi(Drive.API);
         }
+        View view = mActivity.findViewById(android.R.id.content);
+        builder.setViewForPopups(view);
 
         mGoogleApiClientBuilder = builder;
         return builder;
