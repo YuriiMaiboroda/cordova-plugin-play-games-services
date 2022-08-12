@@ -113,6 +113,12 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        gameHelper.onStart(cordova.getActivity());
+    }
+
+    @Override
     public boolean execute(String action, JSONArray inputs, CallbackContext callbackContext) throws JSONException {
 
         JSONObject options = inputs.optJSONObject(0);
