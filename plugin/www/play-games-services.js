@@ -8,7 +8,7 @@ var PlayGamesServices = function () {
 var actions = ['auth', 'signOut', 'isSignedIn',
                'submitScore', 'submitScoreNow', 'getPlayerScore', 'showAllLeaderboards', 'showLeaderboard',
                'unlockAchievement', 'unlockAchievementNow', 'incrementAchievement', 'incrementAchievementNow',
-               'showAchievements', 'showPlayer', 'saveGame', 'loadGame', 'deleteSaveGame'];
+               'showAchievements', 'showPlayer', 'saveGame', 'resolveSnapshotConflict', 'loadGame', 'deleteSaveGame'];
 
 actions.forEach(function (action) {
     PlayGamesServices.prototype[action] = function (data, success, failure) {
@@ -38,5 +38,9 @@ actions.forEach(function (action) {
 PlayGamesServices.prototype.LOAD_GAME_ERROR_FAILED = 0;
 PlayGamesServices.prototype.LOAD_GAME_ERROR_NOT_EXIST = 1;
 PlayGamesServices.prototype.LOAD_GAME_ERROR_NOT_SIGNED = 2;
+
+PlayGamesServices.prototype.ERROR_SNAPSHOT_CONFLICT = 3;
+
+PlayGamesServices.prototype.SAVE_GAME_ERROR_WRONG_PREVIOUSE_SAVE = 4;
 
 module.exports = new PlayGamesServices();
