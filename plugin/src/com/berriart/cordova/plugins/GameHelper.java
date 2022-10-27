@@ -89,10 +89,10 @@ public class GameHelper {
      * because some games methods require an Activity (a Context won't do). We
      * are careful not to leak these references: we release them on onStop().
      */
-    Activity mActivity;
+//    Activity mActivity;
 
     // app context
-    Context mAppContext;
+//    Context mAppContext;
 
     // Request code we use when invoking other Activities to complete the
     // sign-in flow.
@@ -184,9 +184,9 @@ public class GameHelper {
      * @param clientsToUse the API clients to use (a combination of the CLIENT_* flags,
      *                     or CLIENT_ALL to mean all clients).
      */
-    public GameHelper(Activity activity, int clientsToUse) {
-        mActivity = activity;
-        mAppContext = activity.getApplicationContext();
+    public GameHelper(/*Activity activity,*/ int clientsToUse) {
+//        mActivity = activity;
+//        mAppContext = activity.getApplicationContext();
         mRequestedClients = clientsToUse;
         mHandler = new Handler();
     }
@@ -287,7 +287,7 @@ public class GameHelper {
      *
      * @param listener The listener to be notified of sign-in events.
      */
-    public void setup(GameHelperListener listener) {
+    public void setup(GameHelperListener listener, Activity activity) {
         if (mSetupDone) {
             String error = "GameHelper: you cannot call GameHelper.setup() more than once!";
             logError(error);
@@ -301,7 +301,7 @@ public class GameHelper {
             mGoogleSignInOptionsBuilder = createGoogleSignInOptionsBuilder();
         }
 
-        mGoogleSignInClient = GoogleSignIn.getClient(mActivity, mGoogleSignInOptionsBuilder.build());
+        mGoogleSignInClient = GoogleSignIn.getClient(activity, mGoogleSignInOptionsBuilder.build());
         mGoogleSignInOptionsBuilder = null;
         mSetupDone = true;
     }
@@ -310,19 +310,19 @@ public class GameHelper {
      * Returns the GoogleApiClient object. In order to call this method, you
      * must have called @link{setup}.
      */
-    public GoogleSignInAccount getGoogleAccount() {
+    public GoogleSignInAccount getGoogleAccount(Context context) {
         if (mGoogleSignInClient == null) {
             throw new IllegalStateException(
                     "No GoogleSignInClient. Did you call setup()?");
         }
-        return GoogleSignIn.getLastSignedInAccount(mAppContext);
+        return GoogleSignIn.getLastSignedInAccount(context);
     }
 
     /**
      * Returns whether or not the user is signed in.
      */
-    public boolean isSignedIn() {
-        return GoogleSignIn.getLastSignedInAccount(mAppContext) != null;
+    public boolean isSignedIn(Context context) {
+        return GoogleSignIn.getLastSignedInAccount(context) != null;
     }
 
 //    /** Returns whether or not we are currently connecting */
@@ -355,8 +355,8 @@ public class GameHelper {
      * Call this method from your Activity's onStart().
      */
     public void onStart(Activity act) {
-        mActivity = act;
-        mAppContext = act.getApplicationContext();
+//        mActivity = act;
+//        mAppContext = act.getApplicationContext();
 //        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(mActivity);
 //        if (account != null) {
 //            notifyListener(true);
@@ -395,8 +395,8 @@ public class GameHelper {
         debugLog("onStop");
 
         // let go of the Activity reference
-        mActivity = null;
-        mAppContext = null;
+//        mActivity = null;
+//        mAppContext = null;
 //        assertConfigured("onStop");
 //        if (mGoogleApiClient.isConnected()) {
 //            debugLog("Disconnecting client due to onStop");
@@ -660,12 +660,12 @@ public class GameHelper {
      * may show up. At the end of the process, the GameHelperListener's
      * onSignInSucceeded() or onSignInFailed() methods will be called.
      */
-    public void beginUserInitiatedSignIn() {
+    public void beginUserInitiatedSignIn(Activity activity) {
 //        mConnecting = true;
 //        mConnectOnStart = true;
         Intent intent = mGoogleSignInClient.getSignInIntent();
         mListener.setActivityResultCallback();
-        mActivity.startActivityForResult(intent, RC_RESOLVE);
+        activity.startActivityForResult(intent, RC_RESOLVE);
 
 //        debugLog("beginUserInitiatedSignIn: resetting attempt count.");
 //        resetSignInCancellations();
@@ -793,8 +793,8 @@ public class GameHelper {
 
     // Return the number of times the user has cancelled the sign-in flow in the
     // life of the app
-    int getSignInCancellations() {
-        SharedPreferences sp = mAppContext.getSharedPreferences(
+    int getSignInCancellations(Context context) {
+        SharedPreferences sp = context.getSharedPreferences(
                 GAMEHELPER_SHARED_PREFS, Context.MODE_PRIVATE);
         return sp.getInt(KEY_SIGN_IN_CANCELLATIONS, 0);
     }
@@ -802,9 +802,9 @@ public class GameHelper {
     // Increments the counter that indicates how many times the user has
     // cancelled the sign in
     // flow in the life of the application
-    int incrementSignInCancellations() {
-        int cancellations = getSignInCancellations();
-        SharedPreferences.Editor editor = mAppContext.getSharedPreferences(
+    int incrementSignInCancellations(Context context) {
+        int cancellations = getSignInCancellations(context);
+        SharedPreferences.Editor editor = context.getSharedPreferences(
                 GAMEHELPER_SHARED_PREFS, Context.MODE_PRIVATE).edit();
         editor.putInt(KEY_SIGN_IN_CANCELLATIONS, cancellations + 1);
         editor.apply();
@@ -813,8 +813,8 @@ public class GameHelper {
 
     // Reset the counter of how many times the user has cancelled the sign-in
     // flow.
-    void resetSignInCancellations() {
-        SharedPreferences.Editor editor = mAppContext.getSharedPreferences(
+    void resetSignInCancellations(Context context) {
+        SharedPreferences.Editor editor = context.getSharedPreferences(
                 GAMEHELPER_SHARED_PREFS, Context.MODE_PRIVATE).edit();
         editor.putInt(KEY_SIGN_IN_CANCELLATIONS, 0);
         editor.apply();
@@ -975,78 +975,78 @@ public class GameHelper {
 //        }
 //    }
 
-    /**
-     * Shows an error dialog that's appropriate for the failure reason.
-     */
-    public static void showFailureDialog(Activity activity, int actResp,
-                                         int errorCode) {
-        if (activity == null) {
-            Log.e("GameHelper", "*** No Activity. Can't show failure dialog!");
-            return;
-        }
-        Dialog errorDialog = null;
-
-        switch (actResp) {
-            case GamesActivityResultCodes.RESULT_APP_MISCONFIGURED:
-                errorDialog = makeSimpleDialog(activity, GameHelperUtils.getString(
-                        activity, GameHelperUtils.R_APP_MISCONFIGURED));
-                break;
-            case GamesActivityResultCodes.RESULT_SIGN_IN_FAILED:
-                errorDialog = makeSimpleDialog(activity, GameHelperUtils.getString(
-                        activity, GameHelperUtils.R_SIGN_IN_FAILED));
-                break;
-            case GamesActivityResultCodes.RESULT_LICENSE_FAILED:
-                errorDialog = makeSimpleDialog(activity, GameHelperUtils.getString(
-                        activity, GameHelperUtils.R_LICENSE_FAILED));
-                break;
-            default:
-                // No meaningful Activity response code, so generate default Google
-                // Play services dialog
-                errorDialog = GooglePlayServicesUtil.getErrorDialog(errorCode,
-                        activity, RC_UNUSED, null);
-                if (errorDialog == null) {
-                    // get fallback dialog
-                    Log.e("GameHelper",
-                            "No standard error dialog available. Making fallback dialog.");
-                    errorDialog = makeSimpleDialog(
-                            activity,
-                            GameHelperUtils.getString(activity,
-                                    GameHelperUtils.R_UNKNOWN_ERROR)
-                                    + " "
-                                    + GameHelperUtils.errorCodeToString(errorCode));
-                }
-        }
-
-        errorDialog.show();
-    }
-
-    static Dialog makeSimpleDialog(Activity activity, String text) {
-        return (new AlertDialog.Builder(activity)).setMessage(text)
-                .setNeutralButton(android.R.string.ok, null).create();
-    }
-
-    static Dialog
-    makeSimpleDialog(Activity activity, String title, String text) {
-        return (new AlertDialog.Builder(activity)).setMessage(text)
-                .setTitle(title).setNeutralButton(android.R.string.ok, null)
-                .create();
-    }
-
-    public Dialog makeSimpleDialog(String text) {
-        if (mActivity == null) {
-            logError("*** makeSimpleDialog failed: no current Activity!");
-            return null;
-        }
-        return makeSimpleDialog(mActivity, text);
-    }
-
-    public Dialog makeSimpleDialog(String title, String text) {
-        if (mActivity == null) {
-            logError("*** makeSimpleDialog failed: no current Activity!");
-            return null;
-        }
-        return makeSimpleDialog(mActivity, title, text);
-    }
+//    /**
+//     * Shows an error dialog that's appropriate for the failure reason.
+//     */
+//    public static void showFailureDialog(Activity activity, int actResp,
+//                                         int errorCode) {
+//        if (activity == null) {
+//            Log.e("GameHelper", "*** No Activity. Can't show failure dialog!");
+//            return;
+//        }
+//        Dialog errorDialog = null;
+//
+//        switch (actResp) {
+//            case GamesActivityResultCodes.RESULT_APP_MISCONFIGURED:
+//                errorDialog = makeSimpleDialog(activity, GameHelperUtils.getString(
+//                        activity, GameHelperUtils.R_APP_MISCONFIGURED));
+//                break;
+//            case GamesActivityResultCodes.RESULT_SIGN_IN_FAILED:
+//                errorDialog = makeSimpleDialog(activity, GameHelperUtils.getString(
+//                        activity, GameHelperUtils.R_SIGN_IN_FAILED));
+//                break;
+//            case GamesActivityResultCodes.RESULT_LICENSE_FAILED:
+//                errorDialog = makeSimpleDialog(activity, GameHelperUtils.getString(
+//                        activity, GameHelperUtils.R_LICENSE_FAILED));
+//                break;
+//            default:
+//                // No meaningful Activity response code, so generate default Google
+//                // Play services dialog
+//                errorDialog = GooglePlayServicesUtil.getErrorDialog(errorCode,
+//                        activity, RC_UNUSED, null);
+//                if (errorDialog == null) {
+//                    // get fallback dialog
+//                    Log.e("GameHelper",
+//                            "No standard error dialog available. Making fallback dialog.");
+//                    errorDialog = makeSimpleDialog(
+//                            activity,
+//                            GameHelperUtils.getString(activity,
+//                                    GameHelperUtils.R_UNKNOWN_ERROR)
+//                                    + " "
+//                                    + GameHelperUtils.errorCodeToString(errorCode));
+//                }
+//        }
+//
+//        errorDialog.show();
+//    }
+//
+//    static Dialog makeSimpleDialog(Activity activity, String text) {
+//        return (new AlertDialog.Builder(activity)).setMessage(text)
+//                .setNeutralButton(android.R.string.ok, null).create();
+//    }
+//
+//    static Dialog
+//    makeSimpleDialog(Activity activity, String title, String text) {
+//        return (new AlertDialog.Builder(activity)).setMessage(text)
+//                .setTitle(title).setNeutralButton(android.R.string.ok, null)
+//                .create();
+//    }
+//
+//    public Dialog makeSimpleDialog(String text) {
+//        if (mActivity == null) {
+//            logError("*** makeSimpleDialog failed: no current Activity!");
+//            return null;
+//        }
+//        return makeSimpleDialog(mActivity, text);
+//    }
+//
+//    public Dialog makeSimpleDialog(String title, String text) {
+//        if (mActivity == null) {
+//            logError("*** makeSimpleDialog failed: no current Activity!");
+//            return null;
+//        }
+//        return makeSimpleDialog(mActivity, title, text);
+//    }
 
     void debugLog(String message) {
         if (mDebugLog) {
@@ -1063,39 +1063,39 @@ public class GameHelper {
     }
 
     // Represents the reason for a sign-in failure
-    public static class SignInFailureReason {
-        public static final int NO_ACTIVITY_RESULT_CODE = -100;
-        int mServiceErrorCode = 0;
-        int mActivityResultCode = NO_ACTIVITY_RESULT_CODE;
-
-        public int getServiceErrorCode() {
-            return mServiceErrorCode;
-        }
-
-        public int getActivityResultCode() {
-            return mActivityResultCode;
-        }
-
-        public SignInFailureReason(int serviceErrorCode, int activityResultCode) {
-            mServiceErrorCode = serviceErrorCode;
-            mActivityResultCode = activityResultCode;
-        }
-
-        public SignInFailureReason(int serviceErrorCode) {
-            this(serviceErrorCode, NO_ACTIVITY_RESULT_CODE);
-        }
-
-        @NonNull
-        @Override
-        public String toString() {
-            return "SignInFailureReason(serviceErrorCode:"
-                    + GameHelperUtils.errorCodeToString(mServiceErrorCode)
-                    + ((mActivityResultCode == NO_ACTIVITY_RESULT_CODE) ? ")"
-                    : (",activityResultCode:"
-                    + GameHelperUtils
-                    .activityResponseCodeToString(mActivityResultCode) + ")"));
-        }
-    }
+//    public static class SignInFailureReason {
+//        public static final int NO_ACTIVITY_RESULT_CODE = -100;
+//        int mServiceErrorCode = 0;
+//        int mActivityResultCode = NO_ACTIVITY_RESULT_CODE;
+//
+//        public int getServiceErrorCode() {
+//            return mServiceErrorCode;
+//        }
+//
+//        public int getActivityResultCode() {
+//            return mActivityResultCode;
+//        }
+//
+//        public SignInFailureReason(int serviceErrorCode, int activityResultCode) {
+//            mServiceErrorCode = serviceErrorCode;
+//            mActivityResultCode = activityResultCode;
+//        }
+//
+//        public SignInFailureReason(int serviceErrorCode) {
+//            this(serviceErrorCode, NO_ACTIVITY_RESULT_CODE);
+//        }
+//
+//        @NonNull
+//        @Override
+//        public String toString() {
+//            return "SignInFailureReason(serviceErrorCode:"
+//                    + GameHelperUtils.errorCodeToString(mServiceErrorCode)
+//                    + ((mActivityResultCode == NO_ACTIVITY_RESULT_CODE) ? ")"
+//                    : (",activityResultCode:"
+//                    + GameHelperUtils
+//                    .activityResponseCodeToString(mActivityResultCode) + ")"));
+//        }
+//    }
 
     // Not recommended for general use. This method forces the
     // "connect on start" flag

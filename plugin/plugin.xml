@@ -56,5 +56,6 @@
         <source-file src="src/com/berriart/cordova/plugins/BaseGameUtils.java" target-dir="src/com/berriart/cordova/plugins/" />
         <source-file src="src/com/berriart/cordova/plugins/GameHelper.java" target-dir="src/com/berriart/cordova/plugins/" />
         <source-file src="src/com/berriart/cordova/plugins/GameHelperUtils.java" target-dir="src/com/berriart/cordova/plugins/" />
+        <source-file src="src/com/berriart/cordova/plugins/PlayGamesServicesErrorCodes.java" target-dir="src/com/berriart/cordova/plugins/" />
      </platform>
 </plugin>

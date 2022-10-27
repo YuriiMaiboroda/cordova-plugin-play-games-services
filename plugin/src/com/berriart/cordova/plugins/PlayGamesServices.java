@@ -112,11 +112,11 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         googlePlayServicesReturnCode = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(cordovaActivity);
 
         if (googlePlayServicesReturnCode == ConnectionResult.SUCCESS) {
-            gameHelper = new GameHelper(cordovaActivity, GameHelper.CLIENT_ALL);
+            gameHelper = new GameHelper(GameHelper.CLIENT_ALL);
             if ((cordova.getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
                 gameHelper.enableDebugLog(true);
             }
-            gameHelper.setup(this);
+            gameHelper.setup(this, cordovaActivity);
         } else {
             Log.w(LOGTAG, "GooglePlayServices not available. Error: '" +
                     GoogleApiAvailability.getInstance().getErrorString(googlePlayServicesReturnCode) +
@@ -212,7 +212,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
             if (silent) {
                 gameHelper.silentSignIn();
             } else {
-                gameHelper.beginUserInitiatedSignIn();
+                gameHelper.beginUserInitiatedSignIn(cordova.getActivity());
             }
         });
     }
@@ -230,7 +230,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeIsSignedIn");
 
         cordova.getActivity().runOnUiThread(() -> {
-            final boolean signedIn = gameHelper.isSignedIn();
+            final boolean signedIn = gameHelper.isSignedIn(cordova.getActivity());
             try {
                 JSONObject result = new JSONObject();
                 result.put("isSignedIn", signedIn);
@@ -245,7 +245,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeSubmitScore");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeSubmitScore: not yet signed in");
                 return;
             }
@@ -258,7 +258,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .submitScore(leaderboardId, score);
 
             sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.OK, "executeSubmitScore: score submitted successfully");
@@ -269,7 +269,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeSubmitScoreNow");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeSubmitScoreNow: not yet signed in");
                 return;
             }
@@ -282,7 +282,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .submitScoreImmediate(leaderboardId, score)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -315,7 +315,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeGetPlayerScore");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeGetPlayerScore: not yet signed in");
                 return;
             }
@@ -326,7 +326,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .loadCurrentPlayerLeaderboardScore(leaderboardId, LeaderboardVariant.TIME_SPAN_ALL_TIME, LeaderboardVariant.COLLECTION_PUBLIC)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -358,11 +358,11 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         final PlayGamesServices plugin = this;
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeShowAllLeaderboards: not yet signed in");
                 return;
             }
-            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .getAllLeaderboardsIntent()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -382,7 +382,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         final PlayGamesServices plugin = this;
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeShowLeaderboard: not yet signed in");
                 return;
             }
@@ -393,7 +393,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getLeaderboardsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .getLeaderboardIntent(leaderboardId)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -411,7 +411,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeUnlockAchievement");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeUnlockAchievement: not yet signed in");
                 return;
             }
@@ -422,7 +422,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount()).unlock(achievementId);
+            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity())).unlock(achievementId);
             sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.OK, "");
         });
     }
@@ -431,7 +431,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeUnlockAchievementNow");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeUnlockAchievementNow: not yet signed in");
                 return;
             }
@@ -442,7 +442,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .unlockImmediate(achievementId)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -464,7 +464,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeIncrementAchievement");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeIncrementAchievement: not yet signed in");
                 return;
             }
@@ -477,7 +477,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount()).increment(achievementId, numSteps);
+            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity())).increment(achievementId, numSteps);
             sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.OK, "");
         });
     }
@@ -486,7 +486,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeIncrementAchievementNow");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeIncrementAchievement: not yet signed in");
                 return;
             }
@@ -499,7 +499,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .incrementImmediate(achievementId, numSteps)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -525,11 +525,11 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         final PlayGamesServices plugin = this;
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeShowAchievements: not yet signed in");
                 return;
             }
-            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getAchievementsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .getAchievementsIntent()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -546,11 +546,11 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
     private void executeShowPlayer(final CallbackContext callbackContext) {
         Log.d(LOGTAG, "executeShowPlayer");
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeShowPlayer: not yet signed in");
                 return;
             }
-            Games.getPlayersClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getPlayersClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .getCurrentPlayer()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -613,7 +613,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
     private void executeSaveGame(final JSONObject options, final CallbackContext callbackContext) {
         Log.d(LOGTAG, "executeSaveGame");
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeSaveGame: not yet signed in");
                 return;
             }
@@ -656,7 +656,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .open(saveName, true, resolutionPolicy)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -674,7 +674,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                                 }
                                 if (previousSaveTime == -1 || data == null || data.length == 0 ||  previousSaveTime == snapshot.getMetadata().getLastModifiedTimestamp()) {
                                     snapshotContents.writeBytes(saveData.getBytes(StandardCharsets.UTF_8));
-                                    Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+                                    Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                                         .commitAndClose(snapshot, SnapshotMetadataChange.EMPTY_CHANGE)
                                         .addOnCompleteListener(task1 -> {
                                             if (task1.isSuccessful()) {
@@ -739,7 +739,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeLoadGame");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeLoadGame: not yet signed in");
                 return;
             }
@@ -750,7 +750,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .open(saveName, false, SnapshotsClient.RESOLUTION_POLICY_MANUAL)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -811,7 +811,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
 
     private void executeResolveSnapshotConflict(final JSONObject options, final CallbackContext callbackContext) {
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeLoadGame: not yet signed in");
                 return;
             }
@@ -823,7 +823,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                     ? saveConflictData.localSnapshot
                     : saveConflictData.serverSnapshot;
 //                    Boolean override = options.optBoolean("override");
-            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .resolveConflict(saveConflictData.conflictId, snapshot)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -875,7 +875,7 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
         Log.d(LOGTAG, "executeDeleteSaveGame");
 
         cordova.getActivity().runOnUiThread(() -> {
-            if (!gameHelper.isSignedIn()) {
+            if (!gameHelper.isSignedIn(cordova.getActivity())) {
                 sendCordovaMessage(callbackContext, PlayGamesServicesErrorCodes.NOT_SIGN_IN, "executeDeleteSaveGame: not yet signed in");
                 return;
             }
@@ -886,17 +886,17 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
                 sendCordovaMessageByException(callbackContext, e);
                 return;
             }
-            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                 .open(saveName, false, SnapshotsClient.RESOLUTION_POLICY_MOST_RECENTLY_MODIFIED)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         SnapshotsClient.DataOrConflict<Snapshot> dataOrConflict = task.getResult();
                         Snapshot snapshot = dataOrConflict.getData();
                         if (snapshot != null) {
-                            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+                            Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                                 .discardAndClose(snapshot)
                                 .continueWithTask(
-                                    task1 -> Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount())
+                                    task1 -> Games.getSnapshotsClient(cordova.getActivity(), gameHelper.getGoogleAccount(cordova.getActivity()))
                                         .delete(snapshot.getMetadata())
                                 )
                                 .addOnCompleteListener(
@@ -987,6 +987,10 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
     @Override
     public void onSignInFailed(Boolean userCancel) {
         Log.w(LOGTAG, "SIGN IN FAILED" + (userCancel ? " BY USER CANCEL" : " BY ERROR"));
+        if (authCallbackContext == null) {
+            Log.w(LOGTAG, "SIGN IN FAILED: authCallbackContext is null");
+            return;
+        }
         try {
             JSONObject result = new JSONObject();
             result.put("userCancel", userCancel);
@@ -998,6 +1002,10 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
 
     @Override
     public void onSignInSucceeded() {
+        if (authCallbackContext == null) {
+            Log.w(LOGTAG, "SIGN IN SUCCESS: authCallbackContext is null");
+            return;
+        }
         sendCordovaMessage(authCallbackContext, PlayGamesServicesErrorCodes.OK, "SIGN IN SUCCESS");
     }
 
