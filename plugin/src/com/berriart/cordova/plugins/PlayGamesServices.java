@@ -129,7 +129,9 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
     @Override
     public void onStart() {
         super.onStart();
-        gameHelper.onStart(cordova.getActivity());
+        if (gameHelper != null) {
+            gameHelper.onStart(cordova.getActivity());
+        }
     }
 
     @Override
@@ -1016,7 +1018,9 @@ public class PlayGamesServices extends CordovaPlugin implements GameHelperListen
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        gameHelper.onActivityResult(requestCode, resultCode, intent);
+        if (gameHelper != null) {
+            gameHelper.onActivityResult(requestCode, resultCode, intent);
+        }
     }
 
     @Override
